@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe for Kids</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Comic Sans MS, cursive, sans-serif;
+      background: linear-gradient(to bottom, #ffd6d6, #fffbe0);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+    }
+
+    h2 {
+      margin-top: 20px;
+      font-size: 1.6rem;
+      color: #ff4081;
+      text-shadow: 1px 1px white;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      width: 90vw;
+      max-width: 350px;
+      margin-top: 20px;
+    }
+
+    .cell {
+      background: #fff;
+      border: 4px solid #ffb74d;
+      border-radius: 20px;
+      height: 100px;
+      font-size: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.3s, transform 0.1s;
+      box-shadow: 3px 3px #ffa726;
+    }
+
+    .cell:active {
+      transform: scale(0.95);
+    }
+
+    button {
+      margin-top: 25px;
+      padding: 12px 24px;
+      font-size: 1.2rem;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 2px 2px #388e3c;
+    }
+
+    button:hover {
+      background-color: #43a047;
+    }
+
+    .celebrate {
+      animation: pop 0.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.1); }
+    }
+
+    .name-input {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 100px;
+    }
+
+    .name-input input {
+      padding: 10px;
+      font-size: 1.2rem;
+      border-radius: 10px;
+      border: 2px solid #ffb74d;
+      width: 80%;
+      max-width: 300px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="nameScreen" class="name-input">
+    <h2>🎉 Welcome! What’s your name?</h2>
+    <input type="text" id="playerName" placeholder="Type your name here">
+    <button onclick="startGame()">👉 Let's Play!</button>
+  </div>
+
+  <h2 id="status" style="display:none;">Tic Tac Toe</h2>
+  <div class="grid" id="board" style="display:none;"></div>
+  <button id="resetBtn" onclick="resetGame()" style="display:none;">🔁 Play Again!</button>
+
+  <script>
+    let currentPlayer = "X";
+    const boardDiv = document.getElementById("board");
+    const status = document.getElementById("status");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const symbols = {
+      "X": "❌",
+      "O": "🟢",
+      "": ""
+    };
+
+    let playerName = "";
+
+    function startGame() {
+      const nameInput = document.getElementById("playerName").value.trim();
+      if (!nameInput) {
+        alert("Please enter your name 😊");
+        return;
+      }
+      playerName = nameInput;
+      localStorage.setItem("ticName", playerName);
+      document.getElementById("nameScreen").style.display = "none";
+      status.style.display = "block";
+      boardDiv.style.display = "grid";
+      resetBtn.style.display = "inline-block";
+      createBoard();
+      status.textContent = `🎈 Let's go, ${playerName}! Your turn.`;
+    }
+
+    function createBoard() {
+      boardDiv.innerHTML = "";
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.index = i;
+        cell.addEventListener("click", () => makeMove(i));
+        boardDiv.appendChild(cell);
+      }
+    }
+
+    function makeMove(position) {
+      fetch("/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ position })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.board) {
+          updateBoard(data.board);
+          if (data.winner) {
+            const msg = data.winner === "Draw" 
+              ? "😺 It's a Draw!" 
+              : `🏆 hay ${playerName}, ${symbols[data.winner]} wins! 🎉`;
+            status.textContent = msg;
+            status.classList.add("celebrate");
+          } else {
+            currentPlayer = data.current_player;
+            status.textContent = currentPlayer === "X" 
+              ? `🎈 ${playerName}, your turn!` 
+              : "🤖 AI is thinking...";
+          }
+        }
+      });
+    }
+
+    function updateBoard(board) {
+      const cells = document.querySelectorAll(".cell");
+      board.forEach((val, i) => {
+        cells[i].textContent = symbols[val];
+      });
+    }
+
+    function resetGame() {
+      fetch("/reset", { method: "POST" })
+        .then(() => {
+          createBoard();
+          status.classList.remove("celebrate");
+          status.textContent = `🎈 ${playerName}, let's go again! Your turn.`;
+        });
+    }
+
+    // Auto-load name from localStorage if exists
+    window.onload = () => {
+      const storedName = localStorage.getItem("ticName");
+      if (storedName) {
+        playerName = storedName;
+        document.getElementById("nameScreen").style.display = "none";
+        status.style.display = "block";
+        boardDiv.style.display = "grid";
+        resetBtn.style.display = "inline-block";
+        createBoard();
+        status.textContent = `🎈 Welcome back, ${playerName}! Let's play.`;
+      }
+    };
+  </script>
+</body>
+</html>
